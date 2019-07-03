@@ -36,7 +36,7 @@ void main() {
                                              r'\[ (?: {0,2}\+[0-9]{1,3} ms|       )\] Oooh, I do I do I do\n$'));
       expect(mockLogger.traceText, '');
       expect(mockLogger.errorText, matches( r'^\[ (?: {0,2}\+[0-9]{1,3} ms|       )\] Helpless!\n$'));
-    }, overrides: <Type, Generator> {
+    }, overrides: <Type, Generator>{
       OutputPreferences: () => OutputPreferences(showColor: false),
       Platform: _kNoAnsiPlatform,
     });
@@ -57,7 +57,7 @@ void main() {
       expect(
           mockLogger.errorText,
           matches('^$red' r'\[ (?: {0,2}\+[0-9]{1,3} ms|       )\] ' '${bold}Helpless!$resetBold$resetColor' r'\n$'));
-    }, overrides: <Type, Generator> {
+    }, overrides: <Type, Generator>{
       OutputPreferences: () => OutputPreferences(showColor: true),
       Platform: () => FakePlatform()..stdoutSupportsAnsi = true,
     });
@@ -95,7 +95,7 @@ void main() {
     }
 
     for (String testOs in testPlatforms) {
-      testUsingContext('AnsiSpinner works for $testOs', () async {
+      testUsingContext('AnsiSpinner works for $testOs (1)', () async {
         bool done = false;
         FakeAsync().run((FakeAsync time) {
           final AnsiSpinner ansiSpinner = AnsiSpinner(
@@ -131,24 +131,22 @@ void main() {
         Stdio: () => mockStdio,
       });
 
-      testUsingContext('AnsiSpinner works for $testOs', () async {
+      testUsingContext('AnsiSpinner works for $testOs (2)', () async {
         bool done = false;
-        // We pad the time here so that we have a little slack in terms of the first part of this test
-        // taking longer to run than we'd like, since we are forced to start the timer before the actual
-        // stopwatch that we're trying to test. This is an unfortunate possible race condition. If this
-        // turns out to be flaky, we will need to find another solution.
-        final Future<void> tenMillisecondsLater = Future<void>.delayed(const Duration(milliseconds: 15));
-        await FakeAsync().run((FakeAsync time) async {
+        mockStopwatch = FakeStopwatch();
+        FakeAsync().run((FakeAsync time) {
           final AnsiSpinner ansiSpinner = AnsiSpinner(
-            timeout: const Duration(milliseconds: 10),
+            timeout: const Duration(seconds: 2),
           )..start();
+          mockStopwatch.elapsed = const Duration(seconds: 1);
           doWhileAsync(time, () => ansiSpinner.ticks < 10); // one second
           expect(ansiSpinner.seemsSlow, isFalse);
           expect(outputStdout().join('\n'), isNot(contains('This is taking an unexpectedly long time.')));
-          await tenMillisecondsLater;
+          mockStopwatch.elapsed = const Duration(seconds: 3);
           doWhileAsync(time, () => ansiSpinner.ticks < 30); // three seconds
           expect(ansiSpinner.seemsSlow, isTrue);
-          expect(outputStdout().join('\n'), contains('This is taking an unexpectedly long time.'));
+          // Check the 2nd line to verify there's a newline before the warning
+          expect(outputStdout()[1], contains('This is taking an unexpectedly long time.'));
           ansiSpinner.stop();
           expect(outputStdout().join('\n'), isNot(contains('(!)')));
           done = true;
@@ -157,16 +155,17 @@ void main() {
       }, overrides: <Type, Generator>{
         Platform: () => FakePlatform(operatingSystem: testOs),
         Stdio: () => mockStdio,
+        Stopwatch: () => mockStopwatch,
       });
 
       testUsingContext('Stdout startProgress on colored terminal for $testOs', () async {
         bool done = false;
         FakeAsync().run((FakeAsync time) {
-          final Logger logger = context[Logger];
+          final Logger logger = context.get<Logger>();
           final Status status = logger.startProgress(
             'Hello',
             progressId: null,
-            timeout: kSlowOperation,
+            timeout: timeoutConfiguration.slowOperation,
             progressIndicatorPadding: 20, // this minus the "Hello" equals the 15 below.
           );
           expect(outputStderr().length, equals(1));
@@ -190,7 +189,7 @@ void main() {
       testUsingContext('Stdout startProgress on colored terminal pauses on $testOs', () async {
         bool done = false;
         FakeAsync().run((FakeAsync time) {
-          final Logger logger = context[Logger];
+          final Logger logger = context.get<Logger>();
           final Status status = logger.startProgress(
             'Knock Knock, Who\'s There',
             timeout: const Duration(days: 10),
@@ -262,7 +261,7 @@ void main() {
         Stopwatch: () => mockStopwatch,
       });
 
-      testUsingContext('AnsiStatus works when cancelled for $testOs', () async {
+      testUsingContext('AnsiStatus works when canceled for $testOs', () async {
         final AnsiStatus ansiStatus = _createAnsiStatus();
         bool done = false;
         FakeAsync().run((FakeAsync time) {
@@ -357,7 +356,7 @@ void main() {
       called = 0;
       summaryStatus = SummaryStatus(
         message: 'Hello world',
-        timeout: kSlowOperation,
+        timeout: timeoutConfiguration.slowOperation,
         padding: 20,
         onFinish: () => called++,
       );
@@ -367,7 +366,7 @@ void main() {
     List<String> outputStderr() => mockStdio.writtenToStderr.join('').split('\n');
 
     testUsingContext('Error logs are wrapped', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printError('0123456789' * 15);
       final List<String> lines = outputStderr();
       expect(outputStdout().length, equals(1));
@@ -384,7 +383,7 @@ void main() {
     });
 
     testUsingContext('Error logs are wrapped and can be indented.', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printError('0123456789' * 15, indent: 5);
       final List<String> lines = outputStderr();
       expect(outputStdout().length, equals(1));
@@ -404,7 +403,7 @@ void main() {
     });
 
     testUsingContext('Error logs are wrapped and can have hanging indent.', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printError('0123456789' * 15, hangingIndent: 5);
       final List<String> lines = outputStderr();
       expect(outputStdout().length, equals(1));
@@ -424,7 +423,7 @@ void main() {
     });
 
     testUsingContext('Error logs are wrapped, indented, and can have hanging indent.', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printError('0123456789' * 15, indent: 4, hangingIndent: 5);
       final List<String> lines = outputStderr();
       expect(outputStdout().length, equals(1));
@@ -444,7 +443,7 @@ void main() {
     });
 
     testUsingContext('Stdout logs are wrapped', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printStatus('0123456789' * 15);
       final List<String> lines = outputStdout();
       expect(outputStderr().length, equals(1));
@@ -461,7 +460,7 @@ void main() {
     });
 
     testUsingContext('Stdout logs are wrapped and can be indented.', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printStatus('0123456789' * 15, indent: 5);
       final List<String> lines = outputStdout();
       expect(outputStderr().length, equals(1));
@@ -481,7 +480,7 @@ void main() {
     });
 
     testUsingContext('Stdout logs are wrapped and can have hanging indent.', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printStatus('0123456789' * 15, hangingIndent: 5);
       final List<String> lines = outputStdout();
       expect(outputStderr().length, equals(1));
@@ -501,7 +500,7 @@ void main() {
     });
 
     testUsingContext('Stdout logs are wrapped, indented, and can have hanging indent.', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printStatus('0123456789' * 15, indent: 4, hangingIndent: 5);
       final List<String> lines = outputStdout();
       expect(outputStderr().length, equals(1));
@@ -521,7 +520,7 @@ void main() {
     });
 
     testUsingContext('Error logs are red', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printError('Pants on fire!');
       final List<String> lines = outputStderr();
       expect(outputStdout().length, equals(1));
@@ -535,7 +534,7 @@ void main() {
     });
 
     testUsingContext('Stdout logs are not colored', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printStatus('All good.');
       final List<String> lines = outputStdout();
       expect(outputStderr().length, equals(1));
@@ -548,7 +547,7 @@ void main() {
     });
 
     testUsingContext('Stdout printStatus handle null inputs on colored terminal', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printStatus(
         null,
         emphasis: null,
@@ -567,7 +566,7 @@ void main() {
     });
 
     testUsingContext('Stdout printStatus handle null inputs on non-color terminal', () async {
-      final Logger logger = context[Logger];
+      final Logger logger = context.get<Logger>();
       logger.printStatus(
         null,
         emphasis: null,
@@ -589,11 +588,11 @@ void main() {
     testUsingContext('Stdout startProgress on non-color terminal', () async {
       bool done = false;
       FakeAsync().run((FakeAsync time) {
-        final Logger logger = context[Logger];
+        final Logger logger = context.get<Logger>();
         final Status status = logger.startProgress(
           'Hello',
           progressId: null,
-          timeout: kSlowOperation,
+          timeout: timeoutConfiguration.slowOperation,
           progressIndicatorPadding: 20, // this minus the "Hello" equals the 15 below.
         );
         expect(outputStderr().length, equals(1));
@@ -614,7 +613,7 @@ void main() {
       Platform: _kNoAnsiPlatform,
     });
 
-    testUsingContext('SummaryStatus works when cancelled', () async {
+    testUsingContext('SummaryStatus works when canceled', () async {
       summaryStatus.start();
       List<String> lines = outputStdout();
       expect(lines[0], startsWith('Hello world              '));
@@ -660,9 +659,9 @@ void main() {
     }, overrides: <Type, Generator>{Stdio: () => mockStdio, Platform: _kNoAnsiPlatform});
 
     testUsingContext('sequential startProgress calls with StdoutLogger', () async {
-      final Logger logger = context[Logger];
-      logger.startProgress('AAA', timeout: kFastOperation)..stop();
-      logger.startProgress('BBB', timeout: kFastOperation)..stop();
+      final Logger logger = context.get<Logger>();
+      logger.startProgress('AAA', timeout: timeoutConfiguration.fastOperation)..stop();
+      logger.startProgress('BBB', timeout: timeoutConfiguration.fastOperation)..stop();
       final List<String> output = outputStdout();
       expect(output.length, equals(3));
       // There's 61 spaces at the start: 59 (padding default) - 3 (length of AAA) + 5 (margin).
@@ -678,9 +677,9 @@ void main() {
     });
 
     testUsingContext('sequential startProgress calls with VerboseLogger and StdoutLogger', () async {
-      final Logger logger = context[Logger];
-      logger.startProgress('AAA', timeout: kFastOperation)..stop();
-      logger.startProgress('BBB', timeout: kFastOperation)..stop();
+      final Logger logger = context.get<Logger>();
+      logger.startProgress('AAA', timeout: timeoutConfiguration.fastOperation)..stop();
+      logger.startProgress('BBB', timeout: timeoutConfiguration.fastOperation)..stop();
       expect(outputStdout(), <Matcher>[
         matches(r'^\[ (?: {0,2}\+[0-9]{1,3} ms|       )\] AAA$'),
         matches(r'^\[ (?: {0,2}\+[0-9]{1,3} ms|       )\] AAA \(completed.*\)$'),
@@ -695,9 +694,9 @@ void main() {
     });
 
     testUsingContext('sequential startProgress calls with BufferLogger', () async {
-      final BufferLogger logger = context[Logger];
-      logger.startProgress('AAA', timeout: kFastOperation)..stop();
-      logger.startProgress('BBB', timeout: kFastOperation)..stop();
+      final BufferLogger logger = context.get<Logger>();
+      logger.startProgress('AAA', timeout: timeoutConfiguration.fastOperation)..stop();
+      logger.startProgress('BBB', timeout: timeoutConfiguration.fastOperation)..stop();
       expect(logger.statusText, 'AAA\nBBB\n');
     }, overrides: <Type, Generator>{
       Logger: () => BufferLogger(),

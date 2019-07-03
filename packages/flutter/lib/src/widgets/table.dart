@@ -79,6 +79,8 @@ class _TableElementRow {
 
 /// A widget that uses the table layout algorithm for its children.
 ///
+/// {@youtube 560 315 https://www.youtube.com/watch?v=_lbE0wsVZSw}
+///
 /// If you only have one row, the [Row] widget is more appropriate. If you only
 /// have one column, the [SliverList] or [Column] widgets will be more
 /// appropriate.
@@ -308,7 +310,7 @@ class _TableElement extends RenderObjectElement {
     }
     final Iterator<_TableElementRow> oldUnkeyedRows = _children.where((_TableElementRow row) => row.key == null).iterator;
     final List<_TableElementRow> newChildren = <_TableElementRow>[];
-    final Set<List<Element>> taken = Set<List<Element>>();
+    final Set<List<Element>> taken = <List<Element>>{};
     for (TableRow row in newWidget.children) {
       List<Element> oldChildren;
       if (row.key != null && oldKeyedRows.containsKey(row.key)) {

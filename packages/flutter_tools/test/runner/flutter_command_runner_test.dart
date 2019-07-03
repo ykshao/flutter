@@ -74,6 +74,11 @@ void main() {
         fs.directory('$_kArbitraryEngineRoot/src/out/host_debug').createSync(recursive: true);
         fs.file(_kDotPackages).writeAsStringSync('sky_engine:file://$_kArbitraryEngineRoot/src/out/ios_debug/gen/dart-pkg/sky_engine/lib/');
         await runner.run(<String>['dummy', '--local-engine=ios_debug']);
+
+        // Verify that this also works if the sky_engine path is a symlink to the engine root.
+        fs.link('/symlink').createSync('$_kArbitraryEngineRoot');
+        fs.file(_kDotPackages).writeAsStringSync('sky_engine:file:///symlink/src/out/ios_debug/gen/dart-pkg/sky_engine/lib/');
+        await runner.run(<String>['dummy', '--local-engine=ios_debug']);
       }, overrides: <Type, Generator>{
         FileSystem: () => fs,
         Platform: () => platform,
@@ -97,6 +102,19 @@ void main() {
         Platform: () => platform,
       }, initializeFlutterRoot: false);
     });
+
+    testUsingContext('Doesnt crash on invalid .packages file', () async {
+      fs.file('pubspec.yaml').createSync();
+      fs.file('.packages')
+        ..createSync()
+        ..writeAsStringSync('Not a valid package');
+
+      await runner.run(<String>['dummy']);
+
+    }, overrides: <Type, Generator>{
+      FileSystem: () => fs,
+      Platform: () => platform,
+    }, initializeFlutterRoot: false);
 
     group('version', () {
       testUsingContext('checks that Flutter toJson output reports the flutter framework version', () async {

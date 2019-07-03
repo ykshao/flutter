@@ -242,7 +242,7 @@ abstract class WidgetsBindingObserver {
   /// features.
   ///
   /// This method exposes notifications from [Window.onAccessibilityFeaturesChanged].
-  void didChangeAccessibilityFeatures() {}
+  void didChangeAccessibilityFeatures() { }
 }
 
 /// The glue between the widgets layer and the Flutter engine.
@@ -270,7 +270,7 @@ mixin WidgetsBinding on BindingBase, SchedulerBinding, GestureBinding, RendererB
   void initServiceExtensions() {
     super.initServiceExtensions();
 
-    profile(() {
+    if (!kReleaseMode) {
       registerSignalServiceExtension(
         name: 'debugDumpApp',
         callback: () {
@@ -302,7 +302,17 @@ mixin WidgetsBinding on BindingBase, SchedulerBinding, GestureBinding, RendererB
           };
         },
       );
-    });
+
+      // Expose the ability to send Widget rebuilds as [Timeline] events.
+      registerBoolServiceExtension(
+        name: 'profileWidgetBuilds',
+        getter: () async => debugProfileBuildsEnabled,
+        setter: (bool value) async {
+          if (debugProfileBuildsEnabled != value)
+            debugProfileBuildsEnabled = value;
+        },
+      );
+    }
 
     assert(() {
       registerBoolServiceExtension(
@@ -313,16 +323,6 @@ mixin WidgetsBinding on BindingBase, SchedulerBinding, GestureBinding, RendererB
             return Future<void>.value();
           WidgetsApp.debugAllowBannerOverride = value;
           return _forceRebuild();
-        },
-      );
-
-      // Expose the ability to send Widget rebuilds as [Timeline] events.
-      registerBoolServiceExtension(
-        name: 'profileWidgetBuilds',
-        getter: () async => debugProfileBuildsEnabled,
-        setter: (bool value) async {
-          if (debugProfileBuildsEnabled != value)
-            debugProfileBuildsEnabled = value;
         },
       );
 
@@ -566,10 +566,10 @@ mixin WidgetsBinding on BindingBase, SchedulerBinding, GestureBinding, RendererB
   /// This is used by [WidgetsApp] to avoid reporting frames that aren't useful
   /// during startup as the "first frame".
   void deferFirstFrameReport() {
-    profile(() {
+    if (!kReleaseMode) {
       assert(_deferFirstFrameReportCount >= 0);
       _deferFirstFrameReportCount += 1;
-    });
+    }
   }
 
   /// When called after [deferFirstFrameReport]: tell the framework to report
@@ -581,10 +581,10 @@ mixin WidgetsBinding on BindingBase, SchedulerBinding, GestureBinding, RendererB
   /// This is used by [WidgetsApp] to report when the first useful frame is
   /// painted.
   void allowFirstFrameReport() {
-    profile(() {
+    if (!kReleaseMode) {
       assert(_deferFirstFrameReportCount >= 1);
       _deferFirstFrameReportCount -= 1;
-    });
+    }
   }
 
   void _handleBuildScheduled() {
@@ -706,13 +706,13 @@ mixin WidgetsBinding on BindingBase, SchedulerBinding, GestureBinding, RendererB
         return true;
       }());
     }
-    profile(() {
+    if (!kReleaseMode) {
       if (_needToReportFirstFrame && _reportFirstFrame) {
         developer.Timeline.instantSync('Widgets completed first useful frame');
         developer.postEvent('Flutter.FirstFrame', <String, dynamic>{});
         _needToReportFirstFrame = false;
       }
-    });
+    }
   }
 
   /// The [Element] that is at the root of the hierarchy (and which wraps the
@@ -735,6 +735,12 @@ mixin WidgetsBinding on BindingBase, SchedulerBinding, GestureBinding, RendererB
       child: rootWidget,
     ).attachToRenderTree(buildOwner, renderViewElement);
   }
+
+  /// Whether the [renderViewElement] has been initialized.
+  ///
+  /// This will be false until [runApp] is called (or [WidgetTester.pumpWidget]
+  /// is called in the context of a [TestWidgetsFlutterBinding]).
+  bool get isRootWidgetAttached => _renderViewElement != null;
 
   @override
   Future<void> performReassemble() {
@@ -937,7 +943,7 @@ class RenderObjectToWidgetElement<T extends RenderObject> extends RootRenderObje
         exception: exception,
         stack: stack,
         library: 'widgets library',
-        context: 'attaching to the render tree',
+        context: ErrorDescription('attaching to the render tree'),
       );
       FlutterError.reportError(details);
       final Widget error = ErrorWidget.builder(details);

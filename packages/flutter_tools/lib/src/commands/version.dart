@@ -16,7 +16,7 @@ import '../runner/flutter_command.dart';
 import '../version.dart';
 
 class VersionCommand extends FlutterCommand {
-  VersionCommand(): super() {
+  VersionCommand() : super() {
     argParser.addFlag('force',
       abbr: 'f',
       help: 'Force switch to older Flutter versions that do not include a version command',
@@ -35,7 +35,7 @@ class VersionCommand extends FlutterCommand {
 
   Future<List<String>> getTags() async {
     final RunResult runResult = await runCheckedAsync(
-      <String>['git', 'tag', '-l', 'v*'],
+      <String>['git', 'tag', '-l', 'v*', '--sort=-creatordate'],
       workingDirectory: Cache.flutterRoot,
     );
     return runResult.toString().split('\n');

@@ -92,7 +92,7 @@ Future<void> _runLiveTest(Suite suiteConfig, LiveTest liveTest, _Reporter report
 }
 
 Future<void> _runSkippedTest(Suite suiteConfig, Test test, List<Group> parents, _Reporter reporter) async {
-  final LocalTest skipped = LocalTest(test.name, test.metadata, () {}, trace: test.trace);
+  final LocalTest skipped = LocalTest(test.name, test.metadata, () { }, trace: test.trace);
   if (skipped.metadata.skipReason != null) {
     print('Skip: ${skipped.metadata.skipReason}');
   }
@@ -129,7 +129,7 @@ Future<void> _runSkippedTest(Suite suiteConfig, Test test, List<Group> parents, 
 /// If [retry] is passed, the test will be retried the provided number of times
 /// before being marked as a failure.
 ///
-/// [configuring tags]: https://github.com/dart-lang/test/blob/master/doc/package_config.md#configuring-tags
+/// [configuring tags]: https://github.com/dart-lang/test/blob/44d6cb196f34a93a975ed5f3cb76afcc3a7b39b0/doc/package_config.md#configuring-tags
 ///
 /// [onPlatform] allows tests to be configured on a platform-by-platform
 /// basis. It's a map from strings that are parsed as [PlatformSelector]s to
@@ -204,7 +204,7 @@ void test(
 /// [package configuration file][configuring tags]. The parameter can be an
 /// [Iterable] of tag names, or a [String] representing a single tag.
 ///
-/// [configuring tags]: https://github.com/dart-lang/test/blob/master/doc/package_config.md#configuring-tags
+/// [configuring tags]: https://github.com/dart-lang/test/blob/44d6cb196f34a93a975ed5f3cb76afcc3a7b39b0/doc/package_config.md#configuring-tags
 ///
 /// [onPlatform] allows groups to be configured on a platform-by-platform
 /// basis. It's a map from strings that are parsed as [PlatformSelector]s to
@@ -232,8 +232,8 @@ void test(
 /// avoid this flag if possible, and instead use the test runner flag `-n` to
 /// filter tests by name.
 @isTestGroup
-void group(Object description, Function body) {
-  _declarer.group(description.toString(), body);
+void group(Object description, Function body, { dynamic skip }) {
+  _declarer.group(description.toString(), body, skip: skip);
 }
 
 /// Registers a function to be run before tests.
@@ -365,7 +365,7 @@ class _Reporter {
   String _lastProgressSuffix;
 
   /// The set of all subscriptions to various streams.
-  final Set<StreamSubscription<void>> _subscriptions = Set<StreamSubscription<void>>();
+  final Set<StreamSubscription<void>> _subscriptions = <StreamSubscription<void>>{};
 
   /// A callback called when the engine begins running [liveTest].
   void _onTestStarted(LiveTest liveTest) {

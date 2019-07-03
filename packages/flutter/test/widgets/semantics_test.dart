@@ -62,7 +62,7 @@ void main() {
       ignoreId: true,
     ));
     semantics.dispose();
-  });
+  }, semanticsEnabled: false);
 
   testWidgets('Detach and reattach assert', (WidgetTester tester) async {
     final SemanticsTester semantics = SemanticsTester(tester);
@@ -443,7 +443,7 @@ void main() {
           semanticsOwner.performAction(expectedId, action, true);
           break;
         case SemanticsAction.setSelection:
-          semanticsOwner.performAction(expectedId, action, <String, int>{
+          semanticsOwner.performAction(expectedId, action, <dynamic, dynamic>{
             'base': 4,
             'extent': 5,
           });
@@ -474,6 +474,7 @@ void main() {
           selected: true,
           button: true,
           textField: true,
+          readOnly: true,
           focused: true,
           inMutuallyExclusiveGroup: true,
           header: true,
@@ -536,7 +537,7 @@ void main() {
 
     expect(semantics, hasSemantics(expectedSemantics, ignoreId: true));
     semantics.dispose();
-  });
+  }, skip: isBrowser);
 
   testWidgets('Actions can be replaced without triggering semantics update', (WidgetTester tester) async {
     final SemanticsTester semantics = SemanticsTester(tester);
@@ -639,7 +640,7 @@ void main() {
     final SemanticsHandle semantics = tester.ensureSemantics();
     await tester.pumpWidget(Semantics(
       container: true,
-      onTap: () {},
+      onTap: () { },
       onTapHint: 'test',
     ));
 
@@ -650,7 +651,7 @@ void main() {
 
     await tester.pumpWidget(Semantics(
       container: true,
-      onLongPress: () {},
+      onLongPress: () { },
       onLongPressHint: 'foo',
     ));
 
@@ -666,8 +667,8 @@ void main() {
     await tester.pumpWidget(Semantics(
       container: true,
       customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
-        const CustomSemanticsAction(label: 'foo'): () {},
-        const CustomSemanticsAction(label: 'bar'): () {},
+        const CustomSemanticsAction(label: 'foo'): () { },
+        const CustomSemanticsAction(label: 'bar'): () { },
       },
     ));
 
@@ -691,8 +692,8 @@ void main() {
           value: '10s',
           increasedValue: '11s',
           decreasedValue: '9s',
-          onIncrease: () => () {},
-          onDecrease: () => () {},
+          onIncrease: () => () { },
+          onDecrease: () => () { },
         ),
       ),
     );
@@ -967,9 +968,7 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets(
-      'Semantics widgets without sort orders are sorted properly when no Directionality is present',
-      (WidgetTester tester) async {
+  testWidgets('Semantics widgets without sort orders are sorted properly when no Directionality is present', (WidgetTester tester) async {
     final SemanticsTester semantics = SemanticsTester(tester);
     int semanticsUpdateCount = 0;
     final SemanticsHandle handle = tester.binding.pipelineOwner.ensureSemantics(listener: () {

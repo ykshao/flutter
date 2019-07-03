@@ -71,6 +71,13 @@ TaskFunction createCodegenerationIntegrationTest() {
   );
 }
 
+TaskFunction createImageLoadingIntegrationTest() {
+  return DriverTest(
+    '${flutterDirectory.path}/dev/integration_tests/image_loading',
+    'lib/main.dart',
+  );
+}
+
 TaskFunction createFlutterCreateOfflineTest() {
   return () async {
     final Directory tempDir = Directory.systemTemp.createTempSync('flutter_create_test.');
@@ -117,8 +124,8 @@ class DriverTest {
         testTarget,
         '-d',
         deviceId,
+        ...extraOptions,
       ];
-      options.addAll(extraOptions);
       await flutter('drive', options: options, environment: Map<String, String>.from(environment));
 
       return TaskResult.success(null);

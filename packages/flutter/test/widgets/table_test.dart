@@ -5,6 +5,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 class TestStatefulWidget extends StatefulWidget {
   const TestStatefulWidget({ Key key }) : super(key: key);
@@ -67,13 +68,48 @@ void main() {
     await run(TextDirection.rtl);
   });
 
+  testWidgets('Table widget can be detached and re-attached', (WidgetTester tester) async {
+    final Widget table = Table(
+      key: GlobalKey(),
+      children: const <TableRow>[
+        TableRow(
+          decoration: BoxDecoration(
+              color: Colors.yellow
+          ),
+          children: <Widget>[Placeholder()],
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+          child: table,
+        ),
+      ),
+    );
+    // Move table to a different location to simulate detaching and re-attaching effect.
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+          child: Center(
+            child: table
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Table widget - column offset (LTR)', (WidgetTester tester) async {
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
         child: Center(
           child: Table(
-            columnWidths: const <int, TableColumnWidth> {
+            columnWidths: const <int, TableColumnWidth>{
               0: FixedColumnWidth(100.0),
               1: FixedColumnWidth(110.0),
               2: FixedColumnWidth(125.0),
@@ -143,7 +179,7 @@ void main() {
         textDirection: TextDirection.rtl,
         child: Center(
           child: Table(
-            columnWidths: const <int, TableColumnWidth> {
+            columnWidths: const <int, TableColumnWidth>{
               0: FixedColumnWidth(100.0),
               1: FixedColumnWidth(110.0),
               2: FixedColumnWidth(125.0),

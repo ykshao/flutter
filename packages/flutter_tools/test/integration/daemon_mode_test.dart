@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Integration tests which invoke flutter instead of unit testing the code
+// will not produce meaningful coverage information - we can measure coverage
+// from the isolate running the test, but not from the isolate started via
+// the command line process.
+@Tags(<String>['no_coverage'])
 import 'dart:async';
 import 'dart:convert';
 
@@ -47,18 +52,18 @@ void main() {
           .listen((String line) => stdout.add(line));
 
       final Stream<Map<String, dynamic>> stream =
-          stdout.stream.where((String line) {
-        final Map<String, dynamic> response = parseFlutterResponse(line);
-        // ignore 'Starting device daemon...'
-        if (response == null) {
-          return false;
-        }
-        // TODO(devoncarew): Remove this after #25440 lands.
-        if (response['event'] == 'daemon.showMessage') {
-          return false;
-        }
-        return true;
-      }).map(parseFlutterResponse);
+        stdout.stream.where((String line) {
+          final Map<String, dynamic> response = parseFlutterResponse(line);
+          // ignore 'Starting device daemon...'
+          if (response == null) {
+            return false;
+          }
+          // TODO(devoncarew): Remove this after #25440 lands.
+          if (response['event'] == 'daemon.showMessage') {
+            return false;
+          }
+          return true;
+        }).map(parseFlutterResponse);
 
       Map<String, dynamic> response = await stream.first;
       expect(response['event'], 'daemon.connected');
@@ -90,5 +95,5 @@ void main() {
       expect(result, isList);
       expect(result, isNotEmpty);
     });
-  }, timeout: const Timeout.factor(10)); // This test uses the `flutter` tool, which could be blocked behind the startup lock for a long time.
+  }, timeout: const Timeout.factor(10), tags: <String>['integration']); // This test uses the `flutter` tool, which could be blocked behind the startup lock for a long time.
 }

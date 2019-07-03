@@ -178,7 +178,7 @@ class FlutterCommandRunner extends CommandRunner<void> {
     return  '${wrapText(description)}\n\n$usageWithoutDescription';
   }
 
-  static String get _defaultFlutterRoot {
+  static String get defaultFlutterRoot {
     if (platform.environment.containsKey(kFlutterRootEnvironmentVariableName))
       return platform.environment[kFlutterRootEnvironmentVariableName];
     try {
@@ -342,7 +342,7 @@ class FlutterCommandRunner extends CommandRunner<void> {
 
     // We must set Cache.flutterRoot early because other features use it (e.g.
     // enginePath's initializer uses it).
-    final String flutterRoot = topLevelResults['flutter-root'] ?? _defaultFlutterRoot;
+    final String flutterRoot = topLevelResults['flutter-root'] ?? defaultFlutterRoot;
     Cache.flutterRoot = fs.path.normalize(fs.path.absolute(flutterRoot));
 
     // Set up the tooling configuration.
@@ -411,7 +411,7 @@ class FlutterCommandRunner extends CommandRunner<void> {
       try {
         Uri engineUri = PackageMap(PackageMap.globalPackagesPath).map[kFlutterEnginePackageName];
         // Skip if sky_engine is the self-contained one.
-        if (fs.path.join(Cache.flutterRoot, 'bin', 'cache', 'pkg', kFlutterEnginePackageName, 'lib') + fs.path.separator == engineUri?.path) {
+        if (engineUri != null && fs.identicalSync(fs.path.join(Cache.flutterRoot, 'bin', 'cache', 'pkg', kFlutterEnginePackageName, 'lib'), engineUri.path)) {
           engineUri = null;
         }
         // If sky_engine is specified and the engineSourcePath not set, try to determine the engineSourcePath by sky_engine setting.
@@ -478,7 +478,7 @@ class FlutterCommandRunner extends CommandRunner<void> {
   }
 
   static void initFlutterRoot() {
-    Cache.flutterRoot ??= _defaultFlutterRoot;
+    Cache.flutterRoot ??= defaultFlutterRoot;
   }
 
   /// Get the root directories of the repo - the directories containing Dart packages.
@@ -506,7 +506,10 @@ class FlutterCommandRunner extends CommandRunner<void> {
     final List<String> projectPaths = fs.directory(rootPath)
       .listSync(followLinks: false)
       .expand((FileSystemEntity entity) {
-        return entity is Directory ? _gatherProjectPaths(entity.path) : <String>[];
+        if (entity is Directory && !fs.path.split(entity.path).contains('.dart_tool')) {
+          return _gatherProjectPaths(entity.path);
+        }
+        return <String>[];
       })
       .toList();
 
@@ -540,7 +543,16 @@ class FlutterCommandRunner extends CommandRunner<void> {
     // Check that the flutter running is that same as the one referenced in the pubspec.
     if (fs.isFileSync(kPackagesFileName)) {
       final PackageMap packageMap = PackageMap(kPackagesFileName);
-      final Uri flutterUri = packageMap.map['flutter'];
+      Uri flutterUri;
+      try {
+        flutterUri = packageMap.map['flutter'];
+      } on FormatException {
+        // We're not quite sure why this can happen, perhaps the user
+        // accidentally edited the .packages file. Re-running pub should
+        // fix the issue, and we definitely shouldn't crash here.
+        printTrace('Failed to parse .packages file to check flutter dependency.');
+        return;
+      }
 
       if (flutterUri != null && (flutterUri.scheme == 'file' || flutterUri.scheme == '')) {
         // .../flutter/packages/flutter/lib
